@@ -25,10 +25,10 @@ mixer.init()
 mixer.music.load("alarm.wav")
 
 # Twilio configuration
-TWILIO_ACCOUNT_SID = 'AC4ba59631ca4a644e4911e0d015465dbb'
-TWILIO_AUTH_TOKEN = 'c5f6be25014d0bb59baa0657438f12ce'
-TWILIO_PHONE_NUMBER = '+18156052509'
-RECIPIENT_PHONE_NUMBER = '+919080052230'  # Your friend's phone number
+TWILIO_ACCOUNT_SID = '*********************************'
+TWILIO_AUTH_TOKEN = '*********************************'
+TWILIO_PHONE_NUMBER = '**********************'
+RECIPIENT_PHONE_NUMBER = '************************'  # Your friend's phone number
 
 client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)  # Initialize Twilio client
 
