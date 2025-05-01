@@ -1,0 +1,9 @@
+opencv-python
+torch
+numpy
+imutils
+dlib
+pygame
+scipy
+twilio
+

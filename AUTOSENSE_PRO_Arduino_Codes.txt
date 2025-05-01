@@ -1,0 +1,140 @@
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+#include <DHT.h>
+
+// Define pins
+#define MQ3_PIN A0        // Alcohol sensor pin
+#define DHTPIN 2          // DHT11 data pin
+#define DHTTYPE DHT11     // DHT 11
+#define BUZZER_PIN 3      // Buzzer pin (digital pin D3)
+
+// Create an instance of the DHT sensor
+DHT dht(DHTPIN, DHTTYPE);
+
+// Create an LCD object (I2C address can be 0x27 or 0x3F)
+LiquidCrystal_I2C lcd(0x27, 16, 2);  // I2C address, columns, rows
+
+// Variables
+float alcoholValue;
+float temperature;
+float humidity;
+
+// Calibration constants (hypothetical values, adjust based on your data)
+const float MAX_BAC = 0.10; // Maximum BAC (g/dL)
+const int THRESHOLD_0 = 800; // Raw value threshold for BAC 0.15
+const int THRESHOLD_1 = 900; // Raw value threshold for BAC 0.20
+const float BAC_0 = 0.15;    // Corresponding BAC for THRESHOLD_0
+const float BAC_1 = 0.20;    // Corresponding BAC for THRESHOLD_1
+const float MAX_TEMP = 32.0; // Maximum safe temperature (in °C)
+
+void setup() {
+    // Initialize serial communication
+    Serial.begin(9600);
+    
+    // Initialize the DHT sensor
+    dht.begin();
+    
+    // Initialize the LCD with columns and rows
+    lcd.begin(16, 2);  // Set the number of columns and rows
+    lcd.backlight();
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("System Ready");
+    delay(2000);
+    
+    // Initialize the buzzer pin as output
+    pinMode(BUZZER_PIN, OUTPUT);
+    digitalWrite(BUZZER_PIN, LOW);  // Turn off the buzzer initially
+}
+
+void loop() {
+    static unsigned long lastReadTime = 0;
+    unsigned long currentTime = millis();
+
+    if (currentTime - lastReadTime >= 2000) { // Read every 2 seconds
+        alcoholValue = analogRead(MQ3_PIN);
+        temperature = dht.readTemperature();
+        humidity = dht.readHumidity();
+
+        // Print raw alcohol value to the serial monitor
+        Serial.print("Raw Alcohol Value: ");
+        Serial.println(alcoholValue); 
+
+        // Check if any reads failed and exit early (to try again)
+        if (isnan(temperature) || isnan(humidity)) {
+            lcd.clear();
+            lcd.setCursor(0, 0);
+            lcd.print("DHT11 Error");
+            return;
+        }
+
+        // Convert the raw alcohol value to BAC (g/dL) using linear interpolation
+        float bac = 0.0;
+
+        if (alcoholValue < THRESHOLD_0) {
+            bac = 0.0; // Below the minimum threshold
+        } else if (alcoholValue >= THRESHOLD_0 && alcoholValue < THRESHOLD_1) {
+            // Linear interpolation
+            bac = BAC_0 + ((BAC_1 - BAC_0) / (THRESHOLD_1 - THRESHOLD_0)) * (alcoholValue - THRESHOLD_0);
+        } else {
+            bac = MAX_BAC; // Capped at max BAC
+        }
+
+        // Check for alcohol detection
+        if (bac >= 0.08) {  // Check if BAC is above the legal limit for driving
+            lcd.clear();
+            lcd.setCursor(0, 0);
+            lcd.print("Alcohol Detected");
+            lcd.setCursor(0, 1);
+            lcd.print("Stop Vehicle!");
+            
+            // Sound the buzzer for 5 seconds
+            soundBuzzer(5000);
+        } else {
+            // Check if temperature exceeds 33°C
+            if (temperature >= MAX_TEMP) {
+                lcd.clear();
+                lcd.setCursor(0, 0);
+                lcd.print("High Temp Detected");
+                lcd.setCursor(0, 1);
+                lcd.print("Stop Vehicle!");
+                
+                // Sound the buzzer for 5 seconds
+                soundBuzzer(5000);
+            } else {
+                // Clear the LCD for normal operation (only show temp and humidity)
+                lcd.clear();
+                lcd.setCursor(0, 0);
+                lcd.print("Temp: ");
+                lcd.print(temperature);
+                lcd.print("C");
+                lcd.setCursor(0, 1);
+                lcd.print("Humidity: ");
+                lcd.print(humidity);
+                lcd.print("%");
+            }
+        }
+
+        // Add any incoming warnings from Python here (e.g., for traffic sign detection)
+        if (Serial.available() > 0) {
+            String warning = Serial.readStringUntil('\n');
+            lcd.clear();
+            lcd.setCursor(0, 0);
+            lcd.print(warning);
+
+            // Sound the buzzer for 5 seconds when a traffic sign is detected
+            soundBuzzer(500);
+        }
+
+        lastReadTime = currentTime; // Update the last read time
+    }
+
+    delay(100); // Delay for stability
+}
+
+// Function to sound the buzzer for a specified duration (in milliseconds)
+void soundBuzzer(int duration) {
+    digitalWrite(BUZZER_PIN, HIGH);  // Turn on the buzzer
+    delay(duration);                 // Keep it on for the specified duration
+    digitalWrite(BUZZER_PIN, LOW);   // Turn off the buzzer
+}
