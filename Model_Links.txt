@@ -1,0 +1,7 @@
+Traffic Sign Detection Trained DATASET LINK :
+
+https://drive.google.com/drive/folders/1cPUdWTf7yDiyoh2VRNdISKkzqZqVF8N5?usp=sharing
+
+
+Trained Model Links:
+https://drive.google.com/drive/folders/1fF4LFXJoPGRC9gX8P8LqIKbqhdbZHjsk?usp=sharing
